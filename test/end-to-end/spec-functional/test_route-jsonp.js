@@ -143,7 +143,7 @@ describe("-- Tests fonctionnels du Service de Calcul d’itinéraires : JSONP --
                     },
                     viaPoints: [],
                     provideBbox: true,
-                    exclusions: ["Tunnel", "Toll"],
+                    exclusions: ["tunnel", "toll"],
                     distanceUnit: "km",
                     graph: "Voiture",
                     provideGeometry: false,

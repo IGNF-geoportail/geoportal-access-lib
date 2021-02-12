@@ -8,7 +8,6 @@ should();
 
 import RouteResponse from "../../src/Services/Route/Response/model/RouteResponse";
 import RouteInstruction from "../../src/Services/Route/Response/model/RouteInstruction";
-import RouteResponseRESTReader from "../../src/Services/Route/Formats/RouteResponseRESTReader";
 
 describe("-- Tests RouteResponse --", function () {
 
@@ -43,20 +42,4 @@ describe("-- Tests RouteResponse --", function () {
 
     });
 
-    describe("-- test de RouteResponseRESTReader", function () {
-
-        it("attributs de RouteResponseRESTReader", function () {
-            should().exist(RouteResponseRESTReader);
-            expect(RouteResponseRESTReader).to.have.property("READERS");
-            expect(RouteResponseRESTReader.READERS).to.have.property("routeResult");
-            expect(RouteResponseRESTReader.READERS).to.have.property("status");
-            expect(RouteResponseRESTReader.READERS).to.have.property("message");
-            expect(RouteResponseRESTReader.READERS).to.have.property("distance");
-            expect(RouteResponseRESTReader.READERS).to.have.property("durationSeconds");
-            expect(RouteResponseRESTReader.READERS).to.have.property("bounds");
-            expect(RouteResponseRESTReader.READERS).to.have.property("geometryWkt");
-            expect(RouteResponseRESTReader.READERS).to.have.property("step");
-            expect(RouteResponseRESTReader).to.have.property("read");
-        });
-    });
 });

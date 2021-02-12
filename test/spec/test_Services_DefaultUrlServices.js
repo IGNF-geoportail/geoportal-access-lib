@@ -30,10 +30,7 @@ describe("-- Test DefaultUrlService --", function () {
             expect(DefaultUrlService.AutoConf.url(key)["apiKey"]).to.be.equal("https://wxs.ign.fr/CLE/autoconf");
             expect(DefaultUrlService.AutoConf.url(keys)["apiKeys"]).to.be.equal("https://wxs.ign.fr/CLE1/autoconf?keys=CLE1,CLE2");
             expect(DefaultUrlService.Geocode.url(key)).to.be.equal("https://wxs.ign.fr/CLE/geoportail/ols");
-            expect(DefaultUrlService.Route.url(key)["route-json"]).to.be.equal("https://wxs.ign.fr/CLE/itineraire/rest/route.json");
-            expect(DefaultUrlService.Route.url(key)["route-xml"]).to.be.equal("https://wxs.ign.fr/CLE/itineraire/rest/route.xml");
-            expect(DefaultUrlService.Route.url(key)["ols"]).to.be.equal("https://wxs.ign.fr/CLE/itineraire/ols");
-
+            expect(DefaultUrlService.Route.url(key)).to.be.equal("https://wxs.ign.fr/CLE/simple/1.0.0/route");
         });
     });
 });

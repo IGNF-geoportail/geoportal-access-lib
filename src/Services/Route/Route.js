@@ -19,14 +19,9 @@ import RouteResponseFactory from "./Response/RouteResponseFactory";
  * @extends {Gp.Services.CommonService}
  * @param {Object} options - options spécifiques au service (+ les options heritées)
  *
- * @param {String} [options.api] - Manière d'accéder au service : 'REST' (via l'API REST) ou 'OLS' (via la norme XLS).
- * Par défaut, on utilise l'API REST.
+ * @param {String} options.resource - La ressource utilisée pour le calcul. Ce paramètre devrait être obligatoire car il l'est dans l'appel au service. Mais il ne l'est pas pour des raisons de rétrocompatibilité.
  *
- * @param {String} options.outputFormat - Le format de la réponse du service itineraire : 'xml' ou 'json'.
- *      Ce paramètre déterminera l'extension '.xml' ou '.json' du service dans le cas de l'API REST.
- *      Nécessaire si serverUrl est renseigné, et qu'on souhaite passer par l'API REST,
- *      pour connaître le format dans lequel sera fournie la réponse (pour son traitement).
- *      Non nécessaire pour la norme OLS. Par défaut, ce paramètre vaut 'json'.
+ * @param {String} options.outputFormat - Le format de la réponse du service itineraire : 'json' uniquement et par défaut.
  *
  * @param {String} [options.routePreference = "fastest"] - Mode de calcul à utiliser :
  * - le plus rapide « fastest »
@@ -48,9 +43,16 @@ import RouteResponseFactory from "./Response/RouteResponseFactory";
  *      Détermine le profil de vitesses utilisé pour le calcul ainsi que les tronçons autorisés ou non.
  *      Par défaut, c'est la valeur "Voiture" qui sera utilisée.
  *
- * @param {String[]} [options.exclusions] - Critères d'exclusions à appliquer pour le calcul. (correspond au paramètre "avoidFeature" d'OpenLS)
+ * @param {String[]} [options.exclusions] - DEPRECATED: Critères d'exclusions à appliquer pour le calcul. (correspond au paramètre "avoidFeature" d'OpenLS)
  *      On précise ici le type de tronçons que l'on ne veut pas que l'itinéraire emprunte
  *      (valeurs possibles : « toll » (éviter les péages), « bridge », « tunnel »).
+ *      Ce paramètre est conservé pour une rétrocompatibilité de l'api. Le nouveau paramètre à utiliser est options.constraints
+ *
+ * @param {Object[]} [options.constraints] - Critères de contraintes à appliquer sur un itinéraire. Les valeurs disponibles dépendent de la ressource utilisée. Il est donc utile de regarder le getCapabilities.
+ * @param {String} [options.constraints.constraintType] - Type de la contrainte. Généralement "banned".
+ * @param {String} [options.constraints.key] - Clé de la contrainte. Généralement "wayType".
+ * @param {String} [options.constraints.operator] - Opérateur de la contrainte. Généralement "=".
+ * @param {String} [options.constraints.value] - Valeur de la contrainte. Généralement "autoroute".
  *
  * @param {Boolean} [options.geometryInInstructions = false] - Indique si la géométrie de l'itinéraire doit être reprise morceau par morceau dans les instructions.
  *      (correspond au paramètre "provideGeometry" d'OpenLS) Par défaut : false.
@@ -60,16 +62,21 @@ import RouteResponseFactory from "./Response/RouteResponseFactory";
  *
  * @param {String} [options.distanceUnit = "km"] - Indique si la distance doit être exprimée en km ou m dans la réponse.
  *      Par défaut : km.
+ * @param {String} [options.timeUnit = "standard"] - Indique si la durée doit être exprimée en seconde, minute ou heure dans la réponse. Il peut-être formatté hh:mm::ss avec la valeur standard.
+ *      Les valeurs possibles sont "standard", "second", "minute" ou "hour".
+ *      Par défaut : "standard".
  *
  * @param {String} [options.srs] - Système de coordonnées dans lequel les paramètres géographiques en entrée et la réponse du service sont exprimés.
  *      Pas de valeur par défaut. Si le serveur consulté est celui du Géoportail, la valeur par défaut sera donc celle du service : 'EPSG:4326'.
+ *
+ * @param {String[]} [options.waysAttributes] - Nom des attributs des voies. Les valeurs disponibles dépendent de la ressource utilisée. Il est donc utile de regarder le getCapabilities.
  *
  * @example
  *  var options = {
  *      // options communes aux services
  *      apiKey : null,
  *      serverUrl : 'http://localhost/service/',
- *      protocol : 'JSONP', // JSONP|XHR
+ *      protocol : 'XHR',
  *      proxyURL : null,
  *      httpMethod : 'GET', // GET|POST
  *      timeOut : 10000, // ms
@@ -78,8 +85,8 @@ import RouteResponseFactory from "./Response/RouteResponseFactory";
  *      onSuccess : function (response) {},
  *      onFailure : function (error) {},
  *      // spécifique au service
- *      api : 'OLS',
- *      outputFormat : 'xml',
+ *      resource : 'bdtopo'
+ *      outputFormat : 'json',
  *      startPoint : {
  *          x : 42.1121,
  *          y : 1.5557
@@ -88,11 +95,11 @@ import RouteResponseFactory from "./Response/RouteResponseFactory";
  *          x : 42.1121,
  *          y : 1.5557
  *      },
- *      provideBbox : false,
+ *      provideBbox : true,
  *      exclusions : ["Bridge", "Tunnel", "Toll"],
  *      distanceUnit : "km",
  *      graph : "Voiture",
- *      geometryInInstructions : false,
+ *      geometryInInstructions : true,
  *      routePreference : "fastest"
  *  };
  *
@@ -141,73 +148,96 @@ function Route (options) {
     }
 
     // options par defaut
-    // on passe l'option api en majuscules afin d'éviter des exceptions.
-    this.options.api = (typeof options.api === "string") ? options.api.toUpperCase() : "REST";
 
     // on passe l'option outputFormat en minuscules afin d'éviter des exceptions.
-    this.options.outputFormat = (typeof options.outputFormat === "string") ? options.outputFormat.toLowerCase() : "json";
-
+    if (options.outputFormat && options.outputFormat !== "json") {
+        this.logger.warn("options.outputFormat could only be json");
+    }
+    this.options.outputFormat = "json";
+    
+    this.options.resource = options.resource || "bduni-idf-osrm";
     this.options.startPoint = options.startPoint;
     this.options.endPoint = options.endPoint;
-    this.options.viaPoints = options.viaPoints || null; // INFO mapping viaPoints <=> xls:viaPoint
-    this.options.exclusions = options.exclusions || null; // INFO mapping exclusions <=> xls:avoidFeature
+    this.options.viaPoints = options.viaPoints || [];
     this.options.routePreference = options.routePreference || "fastest";
-    this.options.graph = options.graph || "Voiture";
-    this.options.geometryInInstructions = options.geometryInInstructions || false; // INFO mapping geometryInInstructions <=> xls:provideGeometry
-    this.options.provideBbox = options.provideBbox || true; // INFO mapping provideBbox <=> xls:provideBoundingBox
+    /** Gestion des anciennes valeurs de graph */
+    if (options.graph) {
+        if (options.graph === "Voiture") {
+            this.options.graph = "car";
+        }
+        if (options.graph === "Pieton") {
+            this.options.graph = "pedestrian";
+        }
+    } else {
+        this.options.graph = "car";
+    }
+    this.options.constraints = [];
+    if (options.constraints) {
+        if (Array.isArray(options.constraints)) {
+            for (var k = 0; k < options.constraints.length; k++) {
+                this.options.constraints.push(options.constraints[k]);
+            }
+        } else {
+            throw new Error(_.getMessage("PARAM_TYPE", "constraints"));
+        }
+    }
+
+    /** Gestion de l'ancien paramètre exclusion */
+    var constraintTunnel = {};
+    var constraintPont = {};
+    var constraintAutoroute = {};
+    if (options.exclusions) {
+        if (options.exclusions.length !== 0) {
+            this.logger.warn("options.exclusions is DEPRECATED !!");
+            for(var c = 0; c < options.exclusions.length; c++) {
+                if (typeof options.exclusions[c] === "string") {
+                    options.exclusions[c] = options.exclusions[c].toLowerCase();
+                } else {
+                    // on ne crée pas une erreur pour rétro-compatibilité avec les anciennes versions
+                    continue;
+                }
+                if (options.exclusions[c] === "toll") {
+                    constraintAutoroute.constraintType = "banned";
+                    constraintAutoroute.key = "wayType";
+                    constraintAutoroute.operator = "=";
+                    constraintAutoroute.value = "autoroute";
+                    this.options.constraints.push(constraintAutoroute);
+                }
+                if (options.exclusions[c] === "tunnel") {
+                    constraintTunnel.constraintType = "banned";
+                    constraintTunnel.key = "wayType";
+                    constraintTunnel.operator = "=";
+                    constraintTunnel.value = "tunnel";
+                    this.options.constraints.push(constraintTunnel);
+                }
+                if (options.exclusions[c] === "bridge") {
+                    constraintPont.constraintType = "banned";
+                    constraintPont.key = "wayType";
+                    constraintPont.operator = "=";
+                    constraintPont.value = "pont";
+                    this.options.constraints.push(constraintPont);
+                }
+            }
+        }
+    }
+
+    this.options.geometryInInstructions = options.geometryInInstructions || false;
+    this.options.provideBbox = options.provideBbox || true;
     this.options.distanceUnit = options.distanceUnit || "km";
+    this.options.timeUnit = options.timeUnit || "standard";
     this.options.expectedStartTime = null; // FIXME not yet implemented !
     this.options.srs = options.srs || "EPSG:4326";
-
-    // FIXME : les readers OLS ne sont pas implémentés. on utilise donc l'API REST.
-    this.options.api = "REST";
-    this.logger.warn("Surcharge option 'api' : REST (readers OLS non implémentés)");
-    if (this.options.protocol === "XHR") {
-        this.options.httpMethod = "GET";
-        this.logger.trace("Surcharge option 'HttpMethod' : " + this.options.httpMethod);
-    }
+    this.options.waysAttributes = options.waysAttributes || [];
 
     // gestion de l'url du service par defaut
     // si l'url n'est pas renseignée, il faut utiliser les urls par defaut
-    // en fonction du type d'api, REST ou OLS
     if (!this.options.serverUrl) {
-        var lstUrlByDefault = DefaultUrlService.Route.url(this.options.apiKey);
-        var urlFound = null;
-        switch (this.options.api) {
-            case "OLS":
-                urlFound = lstUrlByDefault.ols;
-                break;
-            case "REST":
-                var key = "route" + "-" + this.options.outputFormat;
-                urlFound = lstUrlByDefault[key];
-                break;
-            default:
-                throw new Error(_.getMessage("PARAM_UNKNOWN", "api"));
-        }
-
-        if (!urlFound) {
+        var UrlByDefault = DefaultUrlService.Route.url(this.options.apiKey);
+        if (!UrlByDefault) {
             throw new Error("Url by default not found !");
         }
-        this.options.serverUrl = urlFound;
+        this.options.serverUrl = UrlByDefault;
         this.logger.trace("Serveur URL par defaut : " + this.options.serverUrl);
-    }
-
-    // gestion du type de service
-    // si l'extension de l'url est .json ou .xml, on surcharge le format de sortie (outputFormat)
-    var idx = this.options.serverUrl.lastIndexOf(".");
-    if (idx !== -1) {
-        var extension = this.options.serverUrl.substring(idx + 1);
-        if (extension && extension.length < 5) { // FIXME extension de moins de 4 car. ...
-            this.logger.trace("Serveur Extension URL : " + extension);
-            switch (extension.toLowerCase()) {
-                case "json":
-                case "xml":
-                    this.options.outputFormat = extension.toLowerCase();
-                    break;
-                default:
-                    throw new Error("type of service : unknown or unsupported (json or xml) !");
-            }
-        }
     }
 }
 
@@ -234,17 +264,19 @@ Route.prototype.constructor = Route;
 Route.prototype.buildRequest = function (error, success) {
     var options = {
         // spécifique au service
-        api : this.options.api,
+        resource : this.options.resource,
         startPoint : this.options.startPoint,
         endPoint : this.options.endPoint,
         viaPoints : this.options.viaPoints,
         provideBbox : this.options.provideBbox,
-        exclusions : this.options.exclusions,
+        constraints : this.options.constraints,
         distanceUnit : this.options.distanceUnit,
+        timeUnit : this.options.timeUnit,
         graph : this.options.graph,
         geometryInInstructions : this.options.geometryInInstructions,
         routePreference : this.options.routePreference,
-        srs : this.options.srs
+        srs : this.options.srs,
+        waysAttributes : this.options.waysAttributes
     };
 
     this.request = RouteRequestFactory.build(options);
@@ -266,16 +298,14 @@ Route.prototype.buildRequest = function (error, success) {
  */
 Route.prototype.analyzeResponse = function (error, success) {
     // INFO
-    // Factory pour masquer la complexité du retour du service qui renvoie soit
-    //  - une 'string' qui contient du XML ou JSON natif en mode XHR
-    //  - un objet JSON qui est natif ou encapsulé
+    // Factory pour masquer la complexité du retour du service
 
     if (this.response) {
         var options = {
-            distanceUnit : this.options.distanceUnit, // FIXME ce parametre nous permet de choisir le type d'unité dans la reponse !
+            distanceUnit : this.options.distanceUnit,
+            timeUnit : this.options.timeUnit,
             response : this.response,
             outputFormat : this.options.outputFormat, // utile pour parser la string en mode XHR : JSON ou XML !
-            api : this.options.api, // utile de connaitre le type d'API car la reponse est differente !
             rawResponse : this.options.rawResponse,
             onError : error,
             onSuccess : success,

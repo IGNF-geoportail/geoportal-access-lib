@@ -43,7 +43,7 @@ describe("-- Test sur les messages d'erreur spécifiques du Service de calcul d'
                 y: 48.45
             },
             provideBbox : true,
-            exclusions : ["Tunnel", "Toll"], // "Bridge",
+            exclusions : ["tunnel", "toll"], // "Bridge",
             distanceUnit : "km",
             graph : "Voiture",
             provideGeometry : false,
@@ -110,49 +110,6 @@ describe("-- Test sur les messages d'erreur spécifiques du Service de calcul d'
             console.log(e.message);
             expect(e).not.to.be.null;
             expect(e.message).to.be.equal("Parameter(s) 'endPoint' missing");
-        } finally {}
-    });
-
-    xit("NOK Erreur du type d'API : valeur inconnue", function () {
-        // Exception de type Error
-        // Levée par le constructeur Route(), on ne souhaite pas passer par le callback onFailure()
-        // Capturée UNIQUEMENT via un try/catch
-        // Message : Type API value not supported or unknown !
-        // (Type : ERROR_USAGE)
-        // (Status : -1)
-
-        // FIXME
-        // les readers OLS ne sont pas implémentés. on utilise donc toujours l'API REST.
-        options.api = 'BIDON';
-        try {
-            Gp.Services.route(options);
-            expect(false).to.be.true;
-        } catch (e) {
-            console.log(e.message);
-            expect(e).not.to.be.null;
-            expect(e.message).to.be.equal("Value(s) for parameter(s) 'api' unknown");
-        } finally {}
-    });
-
-    it("Erreur du format de sortie : valeur inconnue", function () {
-        // Exception de type Error
-        // Levée par le constructeur Route(), on ne souhaite pas passer par le callback onFailure()
-        // Capturée UNIQUEMENT via un try/catch
-        // Message : Url by default not found !
-        // (Type : ERROR_USAGE)
-        // (Status : -1)
-
-        // FIXME
-        // les readers OLS ne sont pas implémentés. on utilise donc toujours l'API REST.
-        // avec le format de sortie en json
-        options.outputFormat = 'BIDON';
-        try {
-            Gp.Services.route(options);
-            should(false).to.be.true;
-        } catch (e) {
-            console.log(e.message);
-            expect(e).not.to.be.null;
-            expect(e.message).to.be.equal("Url by default not found !");
         } finally {}
     });
 

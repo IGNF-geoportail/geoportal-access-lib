@@ -17,16 +17,10 @@ var mock = __MOCK__;
 var logger = Logger.getLogger("test-autoconf");
 
 // xml load...
-var routeResponseXml, routeResponseJson, routeResponseJsonToll, routeResquestXml;
+var routeResponseJson, routeResponseJsonToll;
 
 if (mock) {
 
-    fetch('test/end-to-end/spec-functional/fixtures/route-response.xml')
-    .then(response => response.text())
-    .then((data) => {
-        logger.warn(data);
-        routeResponseXml = data;
-    });
     fetch('test/end-to-end/spec-functional/fixtures/route-response.json')
     .then(response => response.text())
     .then((data) => {
@@ -39,12 +33,7 @@ if (mock) {
         logger.warn(data);
         routeResponseJsonToll = data;
     });
-    fetch('test/end-to-end/spec-functional/fixtures/route-request.xml')
-    .then(response => response.text())
-    .then((data) => {
-        logger.warn(data);
-        routeResquestXml = data;
-    });
+
 }
 
 describe("-- Tests fonctionnels du Service de Calcul d’itinéraires --", function () {
@@ -87,7 +76,7 @@ describe("-- Tests fonctionnels du Service de Calcul d’itinéraires --", funct
                 if (mock) { server = sinon.fakeServer.create(); }
                 options = {
                     apiKey: myKey,
-                    serverUrl: null,
+                    serverUrl: 'http://localhost:8080/simple/1.0.0/route',
                     protocol: 'XHR', // à surcharger : JSONP|XHR
 
                     httpMethod: 'GET', // à surcharger : GET|POST
@@ -100,8 +89,8 @@ describe("-- Tests fonctionnels du Service de Calcul d’itinéraires --", funct
                         console.log(error);
                     },
                     // spécifique au service
-                    api: 'REST', // à surcharger : REST|OLS
-                    outputFormat: 'json', // à surcharger : json|xml
+                    api: 'REST', 
+                    outputFormat: 'json', 
                     startPoint: {
                         x: 2.64,
                         y: 48.54
@@ -112,7 +101,7 @@ describe("-- Tests fonctionnels du Service de Calcul d’itinéraires --", funct
                     },
                     viaPoints: [],
                     provideBbox: true,
-                    exclusions: ["Toll", "Tunnel"],
+                    exclusions: ["toll", "tunnel"],
                     distanceUnit: "km",
                     graph: "Voiture",
                     provideGeometry: false,
@@ -121,18 +110,10 @@ describe("-- Tests fonctionnels du Service de Calcul d’itinéraires --", funct
                 };
 
                 // OK reponse du service REST
-                var urlGet = "http://wxs.ign.fr/" + myKey + "/itineraire/rest/route.json?gp-access-lib=" + version + "&origin=2.64,48.54&destination=3.01,48.45&method=TIME&waypoints=&graphName=Voiture&exclusions=Toll;Tunnel&srs=EPSG:4326&format=STANDARD";
-                var urlXGet = "http://wxs.ign.fr/" + myKey + "/itineraire/rest/route.xml?gp-access-lib=" + version + "&origin=2.64,48.54&destination=3.01,48.45&method=TIME&waypoints=&graphName=Voiture&exclusions=Toll;Tunnel&srs=EPSG:4326&format=STANDARD";
-                var okResponseXml = [200, { 'Content-type': 'application/xml' }, routeResponseXml];
+                var urlGet = "http://wxs.ign.fr/" + myKey + "/itineraire/rest/route.json?gp-access-lib=" + version + "&origin=2.64,48.54&destination=3.01,48.45&method=TIME&waypoints=&graphName=Voiture&exclusions=toll;tunnel&srs=EPSG:4326&format=STANDARD";
                 var okResponseJson = [200, { 'Content-type': 'application/json' }, routeResponseJson];
                 if (mock) { server.respondWith('GET', urlGet, okResponseJson); }
-                if (mock) { server.respondWith('GET', urlXGet, okResponseXml); }
 
-                // OK reponse du service en xml OLS
-                var urlXGetOls = "http://wxs.ign.fr/" + myKey + "/itineraire/ols?gp-access-lib=" + version;
-                var urlXPostOls = "http://wxs.ign.fr/" + myKey + "/itineraire/ols?gp-access-lib=" + version;
-                if (mock) { server.respondWith('GET', urlXGetOls, okResponseXml); }
-                if (mock) { server.respondWith('POST', urlXPostOls, okResponseXml); }
             });
 
             afterEach(function () {
@@ -157,12 +138,11 @@ describe("-- Tests fonctionnels du Service de Calcul d’itinéraires --", funct
                 if (mock) { server.respond(); }
             });
 
-            it("Appel du service en mode 'XHR'" +
+            xit("Appel du service en mode 'XHR'" +
             " avec la méthode 'POST'" +
             " avec l'API 'REST'" +
             " pour un format de sortie en 'json'", function (done) {
-                // description du test : on a désactivé le POST en XHR+REST,
-                // on interroge donc le service en GET (comme le test ci-dessus)
+                // TODO
 
                 // le service ne prend pas en compte le POST
                 options.httpMethod = 'POST';
@@ -179,88 +159,6 @@ describe("-- Tests fonctionnels du Service de Calcul d’itinéraires --", funct
                 if (mock) { server.respond(); }
             });
 
-            it("Appel du service en mode 'XHR'" +
-            " avec la méthode 'GET'" +
-            " avec l'API 'REST'" +
-            " pour un format de sortie en 'xml'", function (done) {
-
-                options.httpMethod = 'GET';
-                options.outputFormat = 'xml';
-                options.onSuccess = function (response) {
-                    functionAssert(response);
-                    done();
-                };
-                options.onFailure = function (error) {
-                    console.log(error);
-                    done(error);
-                };
-
-                Gp.Services.route(options);
-                if (mock) { server.respond(); }
-            });
-
-            it("Appel du service en mode 'XHR'" +
-            " avec la méthode 'POST'" +
-            " avec l'API 'REST'" +
-            " pour un format de sortie en 'xml'", function (done) {
-                // description du test : on a désactivé le POST en XHR+REST,
-                // on interroge donc le service en GET (comme le test ci-dessus)
-
-                // le service ne prend pas en compte le POST
-                options.httpMethod = 'POST';
-                options.onSuccess = function (response) {
-                    functionAssert(response);
-                    done();
-                };
-                options.onFailure = function (error) {
-                    console.log(error);
-                    done(error);
-                };
-
-                Gp.Services.route(options);
-                if (mock) { server.respond(); }
-            });
-
-            it("Appel du service en mode 'XHR'" +
-            " avec la méthode 'GET'" +
-            " avec l'API 'OLS'" +
-            " pour un format de sortie en 'xml'", function (done) {
-                // description du test : on a désactivé l'api OLS pour l'instant (reader XML non implémenté), on passe toujours par l'api REST.
-
-                options.httpMethod = 'GET';
-                options.api = 'OLS';
-                options.onSuccess = function (response) {
-                    functionAssert(response);
-                    done();
-                };
-                options.onFailure = function (error) {
-                    console.log(error);
-                    done(error);
-                };
-
-                Gp.Services.route(options);
-                if (mock) { server.respond(); }
-            });
-
-            it("Appel du service en mode 'XHR'" +
-            " avec la méthode 'POST'" +
-            " avec l'API 'OLS'" +
-            " pour un format de sortie en 'xml'", function (done) {
-                // description du test : on a désactivé l'api OLS pour l'instant (reader XML non implémenté), on passe toujours par l'api REST.
-
-                options.httpMethod = 'POST';
-                options.onSuccess = function (response) {
-                    functionAssert(response);
-                    done();
-                };
-                options.onFailure = function (error) {
-                    console.log(error);
-                    done(error);
-                };
-
-                Gp.Services.route(options);
-                if (mock) { server.respond(); }
-            });
         });
 
         describe("Test sur les options spécifiques du service (mode 'XHR' avec la méthode 'GET', api 'REST' et format 'json')", function () {
@@ -306,7 +204,7 @@ describe("-- Tests fonctionnels du Service de Calcul d’itinéraires --", funct
                 // options par défaut (à surcharger)
                 options = {
                     apiKey: myKey,
-                    serverUrl: null,
+                    serverUrl: 'http://localhost:8080/simple/1.0.0/route',
                     protocol: 'XHR',
 
                     httpMethod: 'GET',
@@ -322,16 +220,16 @@ describe("-- Tests fonctionnels du Service de Calcul d’itinéraires --", funct
                     // api: 'REST',
                     // outputFormat: 'json',
                     startPoint: {
-                        x: 2.64,
-                        y: 48.54
+                        x: 2.114694,
+                        y: 48.897552
                     },
                     endPoint: {
-                        x: 3.01,
-                        y: 48.45
+                        x: 2.130327,
+                        y: 48.902576
                     },
                     // viaPoints: [],
                     // provideBbox: true,
-                    // exclusions: ["Tunnel", "Toll"], // "Bridge"
+                    // exclusions: ["tunnel", "toll"], // "Bridge"
                     // distanceUnit: "km",
                     // graph: "Voiture",
                     // provideGeometry: false,
@@ -347,8 +245,7 @@ describe("-- Tests fonctionnels du Service de Calcul d’itinéraires --", funct
             describe("les options 'startPoint|endPoint' sont renseignées", function() {
 
                 it("les options 'startPoint|endPoint' sont renseignées", function (done) {
-                    // description du test : envoi d'une requête GET avec les params origin, destination, calcul d'isochrone, pas d'exclusions et graph voiture (options par défaut)
-                    //http://wxs.ign.fr/jhyvi0fgmnuxvfv0zjzorvdn/itineraire/rest/route.json?origin=2.64,48.54&destination=3.01,48.45&method=TIME&graphName=Voiture&srs=EPSG:4326
+                    // description du test : envoi d'une requête GET avec les params origin, destination, calcul d'itineraire, pas d'exclusions et graph voiture (options par défaut)
 
                     options.onSuccess = function (response) {
                         console.log(response);
@@ -363,16 +260,15 @@ describe("-- Tests fonctionnels du Service de Calcul d’itinéraires --", funct
                     Gp.Services.route(options);
 
                     if (mock) {
-                        requests[0].respond(200, { "Content-Type": "application/xml" }, routeResponseJson);
+                        requests[0].respond(200, { "Content-Type": "application/json" }, routeResponseJson);
                     }
                 });
             });
 
             describe("Les options 'startPoint|endPoint' et 'exclusions' sont renseignées", function() {
 
-                it("exclusions = Bridge (pas implémenté par le service !)", function(done) {
-                    // description du test : envoi d'une requête GET avec les params origin, destination, exclusions=bridge calcul d'isochrone, et graph voiture (options par défaut)
-                    // http://wxs.ign.fr/jhyvi0fgmnuxvfv0zjzorvdn/itineraire/rest/route.json?origin=2.64,48.54&destination=3.01,48.45&method=TIME&graphName=Voiture&srs=EPSG:4326
+                it("exclusions = bridge", function(done) {
+                    // description du test : envoi d'une requête GET avec les params origin, destination, exclusions=bridge calcul d'itineraire, et graph voiture (options par défaut)
 
                     options.onSuccess = function (response) {
                         console.log(response);
@@ -383,18 +279,17 @@ describe("-- Tests fonctionnels du Service de Calcul d’itinéraires --", funct
                         console.log(error);
                         done(error);
                     };
-                    //options.exclusions = ["Bridge"];
+                    options.exclusions = ["bridge"];
 
                     Gp.Services.route(options);
 
                     if (mock) {
-                        requests[1].respond(200, { "Content-Type": "application/xml" }, routeResponseJson);
+                        requests[1].respond(200, { "Content-Type": "application/json" }, routeResponseJson);
                     }
                 });
 
-                it("exclusions = Toll", function(done) {
-                    // description du test :envoi d'une requête GET avec les params origin, destination, exclusions=Toll calcul d'isochrone, et graph voiture (options par défaut)
-                    // http://wxs.ign.fr/jhyvi0fgmnuxvfv0zjzorvdn/itineraire/rest/route.json?origin=2.64,48.54&destination=3.01,48.45&method=TIME&graphName=Voiture&srs=EPSG:4326
+                it("exclusions = toll", function(done) {
+                    // description du test :envoi d'une requête GET avec les params origin, destination, exclusions=toll calcul d'itineraire, et graph voiture (options par défaut)
 
                     options.onSuccess = function (response) {
                         console.log(response);
@@ -405,95 +300,311 @@ describe("-- Tests fonctionnels du Service de Calcul d’itinéraires --", funct
                         console.log(error);
                         done(error);
                     };
-                    options.exclusions = ["Toll"];
+                    options.exclusions = ["toll"];
 
                     Gp.Services.route(options);
 
                     if (mock) {
-                        requests[2].respond(200, { "Content-Type": "application/xml" }, routeResponseJsonToll);
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
                     }
                 });
 
-                xit("exclusions = Tunnel", function(done) {
-                    // description du test :
+                it("exclusions = tunnel", function(done) {
+                    // description du test :envoi d'une requête GET avec les params origin, destination, exclusions=tunnel calcul d'itineraire, et graph voiture (options par défaut)
+
+                    options.onSuccess = function (response) {
+                        console.log(response);
+                        functionResponseAssert(response);
+                        done();
+                    };
+                    options.onFailure = function (error) {
+                        console.log(error);
+                        done(error);
+                    };
+                    options.exclusions = ["tunnel"];
+
+                    Gp.Services.route(options);
+
+                    if (mock) {
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
+                    }
                 });
 
-                xit("exclusions = Bridge, Toll, Tunnel", function(done) {
-                    // description du test :
+                it("exclusions = bridge, toll, tunnel", function(done) {
+                    // description du test :envoi d'une requête GET avec les params origin, destination, exclusions="bridge","toll","tunnel" calcul d'itineraire, et graph voiture (options par défaut)
+
+                    options.onSuccess = function (response) {
+                        console.log(response);
+                        functionResponseAssert(response);
+                        done();
+                    };
+                    options.onFailure = function (error) {
+                        console.log(error);
+                        done(error);
+                    };
+                    options.exclusions = ["bridge","toll","tunnel"];
+
+                    Gp.Services.route(options);
+
+                    if (mock) {
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
+                    }
                 });
 
-                xit("sans exclusions", function(done) {
-                    // description du test :
-                });
             });
 
             describe("Les options 'startPoint|endPoint' et 'graph' sont renseignées", function() {
 
-                xit("graph = Voiture", function(done) {
-                    // description du test :
+                it("graph = Voiture", function(done) {
+                    // description du test :envoi d'une requête GET avec les params origin, destination, graph = Voiture calcul d'itineraire, et graph voiture (options par défaut)
+
+                    options.onSuccess = function (response) {
+                        console.log(response);
+                        functionResponseAssert(response);
+                        done();
+                    };
+                    options.onFailure = function (error) {
+                        console.log(error);
+                        done(error);
+                    };
+                    options.exclusions = [];
+                    options.graph = "Voiture";
+
+                    Gp.Services.route(options);
+
+                    if (mock) {
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
+                    }
                 });
 
-                xit("graph = Pieton", function(done) {
-                    // description du test :
+                it("graph = Pieton", function(done) {
+                    // description du test :envoi d'une requête GET avec les params origin, destination, graph = Pieton calcul d'itineraire, et graph pieton (options par défaut)
+
+                    options.onSuccess = function (response) {
+                        console.log(response);
+                        functionResponseAssert(response);
+                        done();
+                    };
+                    options.onFailure = function (error) {
+                        console.log(error);
+                        done(error);
+                    };
+                    options.graph = "Pieton";
+
+                    Gp.Services.route(options);
+
+                    if (mock) {
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
+                    }
                 });
 
-                xit("graph par defaut", function(done) {
-                    // description du test :
+                it("graph = car", function(done) {
+                    // description du test :envoi d'une requête GET avec les params origin, destination, graph = car calcul d'itineraire, et graph voiture (options par défaut)
+
+                    options.onSuccess = function (response) {
+                        console.log(response);
+                        functionResponseAssert(response);
+                        done();
+                    };
+                    options.onFailure = function (error) {
+                        console.log(error);
+                        done(error);
+                    };
+                    options.graph = "car";
+
+                    Gp.Services.route(options);
+
+                    if (mock) {
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
+                    }
                 });
+
+                it("graph = pedestrian", function(done) {
+                    // description du test :envoi d'une requête GET avec les params origin, destination, graph = pedestrian calcul d'itineraire, et graph pieton (options par défaut)
+
+                    options.onSuccess = function (response) {
+                        console.log(response);
+                        functionResponseAssert(response);
+                        done();
+                    };
+                    options.onFailure = function (error) {
+                        console.log(error);
+                        done(error);
+                    };
+                    options.graph = "pedestrian";
+
+                    Gp.Services.route(options);
+
+                    if (mock) {
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
+                    }
+                });
+
             });
 
             describe("Les options 'startPoint|endPoint' et 'routePreference' sont renseignées", function() {
 
-                xit("routePreference = fastest", function(done) {
-                    // description du test :
+                it("routePreference = fastest", function(done) {
+                    // description du test :envoi d'une requête GET avec les params origin, destination, routePreference = fastest calcul d'itineraire, et graph voiture (options par défaut)
+
+                    options.onSuccess = function (response) {
+                        console.log(response);
+                        functionResponseAssert(response);
+                        done();
+                    };
+                    options.onFailure = function (error) {
+                        console.log(error);
+                        done(error);
+                    };
+                    options.graph = "car";
+                    options.routePreference = "fastest";
+
+                    Gp.Services.route(options);
+
+                    if (mock) {
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
+                    }
                 });
 
-                xit("routePreference = shortest", function(done) {
-                    // description du test :
+                it("routePreference = shortest", function(done) {
+                    // description du test :envoi d'une requête GET avec les params origin, destination, routePreference = shortest calcul d'itineraire, et graph voiture (options par défaut)
+
+                    options.onSuccess = function (response) {
+                        console.log(response);
+                        functionResponseAssert(response);
+                        done();
+                    };
+                    options.onFailure = function (error) {
+                        console.log(error);
+                        done(error);
+                    };
+                    options.routePreference = "shortest";
+
+                    Gp.Services.route(options);
+
+                    if (mock) {
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
+                    }
                 });
 
-                xit("routePreference par defaut ", function(done) {
-                    // description du test :
-                });
             });
 
 
             describe("Les options 'startPoint|endPoint' avec 'viaPoints' sont renseignées", function () {
 
-                xit("ajout d'une étape", function(done) {
-                    // description du test :
+                it("ajout d'une étape", function(done) {
+                    options.onSuccess = function (response) {
+                        console.log(response);
+                        functionResponseAssert(response);
+                        done();
+                    };
+                    options.onFailure = function (error) {
+                        console.log(error);
+                        done(error);
+                    };
+                    options.routePreference = "fastest";
+                    options.viaPoints = [
+                        {
+                            x: 2.114780,
+                            y: 48.897421
+                        }
+                    ];
+
+                    Gp.Services.route(options);
+
+                    if (mock) {
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
+                    }
                 });
 
-                xit("ajout de plusieurs points", function(done) {
-                    // description du test :
+                it("ajout de plusieurs points", function(done) {
+                    options.onSuccess = function (response) {
+                        console.log(response);
+                        functionResponseAssert(response);
+                        done();
+                    };
+                    options.onFailure = function (error) {
+                        console.log(error);
+                        done(error);
+                    };
+                    options.viaPoints = [
+                        {
+                            x: 2.114780,
+                            y: 48.897421
+                        },
+                        {
+                            x: 2.114580,
+                            y: 48.897721
+                        }
+                    ];
+
+                    Gp.Services.route(options);
+
+                    if (mock) {
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
+                    }
                 });
 
             });
 
             describe("Utilisation des options : provideBbox, provideGeometry, distanceUnit", function () {
 
-                xit("provideBbox par défaut", function(done) {
-                    // description du test :
+                it("provideBbox = true", function(done) {
+                    options.onSuccess = function (response) {
+                        console.log(response);
+                        functionResponseAssert(response);
+                        done();
+                    };
+                    options.onFailure = function (error) {
+                        console.log(error);
+                        done(error);
+                    };
+                    options.viaPoints = [];
+                    options.provideBbox = true;
+
+                    Gp.Services.route(options);
+
+                    if (mock) {
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
+                    }
                 });
 
-                xit("provideBbox = true", function(done) {
-                    // description du test :
+                it("provideGeometry = true", function(done) {
+                    options.onSuccess = function (response) {
+                        console.log(response);
+                        functionResponseAssert(response);
+                        done();
+                    };
+                    options.onFailure = function (error) {
+                        console.log(error);
+                        done(error);
+                    };
+                    options.provideGeometry = true;
+
+                    Gp.Services.route(options);
+
+                    if (mock) {
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
+                    }
                 });
 
-                xit("provideGeometry par défaut", function(done) {
-                    // description du test :
-                });
+                it("distanceUnit = km", function(done) {
+                    options.onSuccess = function (response) {
+                        console.log(response);
+                        functionResponseAssert(response);
+                        done();
+                    };
+                    options.onFailure = function (error) {
+                        console.log(error);
+                        done(error);
+                    };
+                    options.distanceUnit = "km";
 
-                xit("provideGeometry = true", function(done) {
-                    // description du test :
-                });
+                    Gp.Services.route(options);
 
-                xit("distanceUnit par défaut", function(done) {
-                    // description du test :
-                });
-
-                xit("distanceUnit = KM", function(done) {
-                    // description du test :
+                    if (mock) {
+                        requests[2].respond(200, { "Content-Type": "application/json" }, routeResponseJsonToll);
+                    }
                 });
 
             });

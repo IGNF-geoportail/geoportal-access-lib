@@ -211,25 +211,17 @@ var DefaultUrlService = {
      * Routing web service access
      *
      * @member {Object}
-     * @property {Function} url (key) - Returns routing service default urls with or without geoportal access key given as a parameter. The result is a javascript object with different urls given used protocols ("route-json" or "route-xml").
+     * @property {Function} url (key) - Returns routing service default urls with or without geoportal access key given as a parameter. The result is a javascript object with different urls given used protocols.
      */
     Route : {
-        _key : {
-            ols : "/itineraire/ols", // openLS
-            "route-json" : "/itineraire/rest/route.json", // rest (geoconcept)
-            "route-xml" : "/itineraire/rest/route.xml" // rest (geoconcept)
-        },
+        _key : "/simple/1.0.0/route",
         /**
         * url
         * @param {String} key - key
         * @returns {String} url
         */
         url : function (key) {
-            return {
-                ols : DefaultUrlService.url(key, this._key["ols"]),
-                "route-json" : DefaultUrlService.url(key, this._key["route-json"]),
-                "route-xml" : DefaultUrlService.url(key, this._key["route-xml"])
-            };
+            return DefaultUrlService.url(key, this._key);
         }
     }
 };

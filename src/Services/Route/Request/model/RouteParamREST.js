@@ -18,7 +18,7 @@ function RouteParamREST (options) {
 
     this.logger = Logger.getLogger();
     this.logger.trace("[Constructeur RouteParamREST ()]");
-
+    this.logger.trace(options.constraints);
     /**
      * Options en paramêtres du constructeur.
      */
@@ -26,67 +26,41 @@ function RouteParamREST (options) {
 
     // mapping des options avec l'API REST
 
+    /** Ressource utilisée */
+    this.resource = this.options.resource;
+
     /** Coordonnées du point de départ. */
-    this.origin = this.options.startPoint.x + "," + this.options.startPoint.y;
+    this.start = this.options.startPoint.x + "," + this.options.startPoint.y;
 
     /** Coordonnées du point d’arrivée. */
-    this.destination = this.options.endPoint.x + "," + this.options.endPoint.y;
+    this.end = this.options.endPoint.x + "," + this.options.endPoint.y;
 
     /** Coordonnées des étapes point de départ. */
-    this.waypoints = this.options.viaPoints || null;
+    this.intermediates = this.options.viaPoints;
 
-    /** Date et heure de départ */
-    this.startDateTime = this.options.expectedStartTime || null; // TODO format !?
-
-    /** Nom du graphe à utiliser */
-    this.graphName = this.options.graph;
+    /** Nom du profile à utiliser */
+    this.profile = this.options.graph;
 
     /** projection (code EPSG comme epsg:4326 ou wgs84) */
-    this.srs = this.options.srs;
+    this.crs = this.options.srs;
 
-    /** Liste des règles de restrictions à utiliser, séparés pas le caractère , ou ; (Exemple : Toll, Tunnel, Bridge) */
-    this.exclusions = this.options.exclusions;
+    /** Liste des contraintes */
+    this.constraints = this.options.constraints;
 
-    /**
-     * itinéraire le plus court (DISTANCE) ou le plus rapide (TIME)
-     * Par defaut, DISTANCE...
-     * cf. mapping ci dessous
-     */
-    this.method = "TIME";
-
-    // mapping particulier sur l'option 'routePreference'
-    if (this.options.routePreference) {
-        var value = this.options.routePreference;
-        switch (value) {
-            case "fastest":
-                this.method = "TIME";
-                break;
-            case "shortest":
-                this.method = "DISTANCE";
-                break;
-            default:
-                this.logger.warn("Par defaut, on prend l'itinéraire le plus rapide !");
-                this.method = "TIME";
-        }
-    }
+    /** Nom de l'optimisation à utiliser */
+    this.optimization = this.options.routePreference;
 
     /** Format de sortie (résumé de l’itinéraire) */
-    this.format = (this.options.geometryInInstructions) ? "STANDARDEXT" : "STANDARD";
+    this.getSteps = (this.options.geometryInInstructions) ? "true" : "false";
 
-    // y'a t-il d'autres options à ajouter (par defaut) ?
+    /** Unité des distances */
+    this.distanceUnit = this.options.distanceUnit;
 
-    /** Distance de tolérance (en mètre) de simplification de la géométrie. */
-    this.tolerance = 10;
+    /** Unité des durées */
+    this.timeUnit = this.options.timeUnit;
 
-    /** identifiant du véhicule (enregistré dans les profils de véhicule) à utiliser */
-    this.profileId = null;
-
-    /** Profil du véhicule (enregistré dans les profils de véhicule) à utiliser */
-    this.profileName = null;
-
-    // options dont le mapping n'est pas possible :
-    // - distanceUnit
-    // - provideBoundingBox
+    /** Attributs des voies */
+    this.waysAttributes = this.options.waysAttributes;
 }
 
 /**
@@ -107,27 +81,75 @@ RouteParamREST.prototype = {
 
     /**
      * Retourne une liste de points
-     * @returns {Array} une liste de points (sep ';')
+     * @returns {String} une liste de points (sep '|')
      */
-    getWaypoints : function () {
-        if (!this.waypoints) {
-            return;
-        }
+    getIntermediates : function () {
         var array = [];
-        for (var i = 0; i < this.waypoints.length; i++) {
-            var obj = this.waypoints[i];
-            array.push(obj.x + "," + obj.y);
+        if (this.intermediates.length !== 0) {
+            for (var i = 0; i < this.intermediates.length; i++) {
+                var obj = this.intermediates[i];
+                array.push(obj.x + "," + obj.y);
+            }
         }
 
-        return array.join(";");
+        return array.join("|");
     },
 
     /**
-     * Retourne la liste des exclusions
-     * @returns {Array} une liste d'exclusions (sep ';')
+     * Retourne une liste d'attributs
+     * @returns {String} une liste d'attributs (sep '|')
      */
-    getExclusions : function () {
-        return this.exclusions.join(";");
+    getWaysAttributes : function () {
+        return this.waysAttributes.join("|");
+    },
+
+    /**
+     * Retourne un profile
+     * @returns {String} profile
+     */
+    getProfile : function () {
+        return this.profile;
+    },
+
+    /**
+     * Retourne un distanceUnit
+     * @returns {String} distanceUnit
+     */
+    getDistanceUnit : function () {
+        if (this.distanceUnit === "m") {
+            return "meter";
+        }
+        if (this.distanceUnit === "km") {
+            return "kilometer";
+        }
+        return "";
+    },
+
+    /**
+     * Retourne une optimisation
+     * @returns {String} optimization
+     */
+    getOptimization : function () {
+        if (this.optimization) {
+            return this.optimization;
+        } else {
+            return "";
+        }
+    },
+
+    /**
+     * Retourne la liste des constraints
+     * @returns {String} une liste des constraints (sep '|')
+     */
+    getConstraints : function () {
+        var constraintArray = [];
+
+        if (this.constraints.length !== 0) {
+            for (var k = 0; k < this.constraints.length; k++) {
+                constraintArray.push(JSON.stringify(this.constraints[k]));
+            }
+        }
+        return constraintArray.join("|");
     }
 };
 
@@ -140,59 +162,78 @@ RouteParamREST.prototype.getParams = function () {
     var map = [];
 
     map.push({
-        k : "origin",
-        v : this.origin
+        k : "resource",
+        v : this.resource
     });
 
     map.push({
-        k : "destination",
-        v : this.destination
+        k : "start",
+        v : this.start
     });
 
     map.push({
-        k : "method",
-        v : this.method
+        k : "end",
+        v : this.end
     });
 
-    if (this.waypoints) {
+    map.push({
+        k : "geometryFormat",
+        v : "geojson"
+    });
+
+    if (this.optimization) {
         map.push({
-            k : "waypoints",
-            v : this.getWaypoints()
+            k : "optimization",
+            v : this.getOptimization()
         });
     }
 
-    if (this.startDateTime) {
+    if (this.intermediates) {
         map.push({
-            k : "startDateTime",
-            v : this.startDateTime
+            k : "intermediates",
+            v : this.getIntermediates()
         });
     }
 
-    if (this.graphName) {
+    if (this.profile) {
         map.push({
-            k : "graphName",
-            v : this.graphName
+            k : "profile",
+            v : this.getProfile()
         });
     }
 
-    if (this.exclusions) {
+    if (this.constraints) {
         map.push({
-            k : "exclusions",
-            v : this.getExclusions()
+            k : "constraints",
+            v : this.getConstraints()
         });
     }
 
-    if (this.srs) {
+    if (this.crs) {
         map.push({
-            k : "srs",
-            v : this.srs
+            k : "crs",
+            v : this.crs
         });
     }
 
-    if (this.format) {
+    if (this.distanceUnit) {
         map.push({
-            k : "format",
-            v : this.format
+            k : "distanceUnit",
+            v : this.getDistanceUnit()
+        });
+    }
+
+    if (this.timeUnit) {
+        map.push({
+            k : "timeUnit",
+            v : this.timeUnit
+        });
+    }
+
+    if (this.waysAttributes) {
+        map.push({
+            k : "waysAttributes",
+            v : this.getWaysAttributes()
         });
     }
 
