@@ -94,6 +94,7 @@
               graph: graph,
               reverse: reverse,
               apiKey: "{{ apikey }}",
+              serverUrl : "https://itineraire.ign.fr/simple/1.0.0/isochrone",
               onSuccess: function(result) {
                 resultDiv.innerHTML = "<p>" + JSON.stringify(result) + "</p>"
               },

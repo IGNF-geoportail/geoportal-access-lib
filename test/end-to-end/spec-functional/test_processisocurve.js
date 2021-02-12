@@ -7,7 +7,6 @@ import Gp from "../../../dist/GpServices-src.js";
 import Logger from "../../../src/Utils/LoggerByDefault";
 
 import sinon from "sinon";
-import { assert } from "chai";
 import { expect } from "chai";
 import { should } from "chai";
 should();
@@ -17,18 +16,10 @@ var mock = __MOCK__;
 
 var logger = Logger.getLogger("test-isocurve");
 
-// xml load...
-var processisocurveResponseXml,
-processisocurveResponseJson;
+var processisocurveResponseJson;
 
 if (mock) {
 
-    fetch('test/end-to-end/spec-functional/fixtures/processisocurve-response.xml')
-    .then(response => response.text())
-    .then((data) => {
-        logger.warn(data);
-        processisocurveResponseXml = data;
-    });
     fetch('test/end-to-end/spec-functional/fixtures/processisocurve-response.json')
     .then(response => response.text())
     .then((data) => {
@@ -71,7 +62,7 @@ describe("-- Tests fonctionnels du Service de Calcul d’isochrones / isodistanc
             // options par defaut (à surcharger)
             var options = {
                 apiKey: myKey,
-                serverUrl: null,
+                serverUrl: "https://itineraire.ign.fr/simple/1.0.0/isochrone",
                 protocol: 'XHR', // à surcharger : JSONP|XHR
 
                 httpMethod: 'GET', // à surcharger : GET|POST
@@ -94,9 +85,7 @@ describe("-- Tests fonctionnels du Service de Calcul d’isochrones / isodistanc
                 method: "time",
                 time: 200,
                 srs: "EPSG:4326",
-                reverse: false,
-                smoothing: false,
-                holes: false
+                reverse: false
             };
 
             it("Appel du service en mode 'XHR' avec la méthode 'GET' au format de sortie 'json'", function (done) {
@@ -122,29 +111,6 @@ describe("-- Tests fonctionnels du Service de Calcul d’isochrones / isodistanc
                 if (mock) { server.respond(); }
             });
 
-            it("Appel du service en mode 'XHR' avec la méthode 'GET' au format de sortie 'xml'", function (done) {
-                // description du test
-                //
-                var urlXGet  = "http://wxs.ign.fr/" + myKey + "/isochrone/isochrone.xml?gp-access-lib=" + version + "&location=2.3242664298058053,48.86118017324745&smoothing=false&holes=false&reverse=false&method=time&time=200&graphName=Voiture&exclusions=Toll;Bridge;Tunnel&srs=EPSG:4326";
-                var okResponseXml = [200, { 'Content-type': 'application/xml' }, processisocurveResponseXml];
-                if (mock) { server.respondWith('GET', urlXGet, okResponseXml); }
-
-                options.protocol = 'XHR';
-                options.httpMethod = 'GET';
-                options.outputFormat = 'xml';
-                options.onSuccess = function (response) {
-                    functionAssert(response);
-                    done();
-                };
-                options.onFailure = function (error) {
-                    console.log(error);
-                    done(error);
-                };
-
-                Gp.Services.isoCurve(options);
-                if (mock) { server.respond(); }
-            });
-
             it("Appel du service en mode 'XHR' avec la méthode 'POST' au format de sortie 'json'", function (done) {
                 // description du test
                 //
@@ -154,6 +120,7 @@ describe("-- Tests fonctionnels du Service de Calcul d’isochrones / isodistanc
 
                 options.protocol = 'XHR';
                 options.httpMethod = 'POST';
+                options.contentType = 'application/json',
                 options.outputFormat = 'json';
                 options.onSuccess = function (response) {
                     functionAssert(response);
@@ -168,28 +135,6 @@ describe("-- Tests fonctionnels du Service de Calcul d’isochrones / isodistanc
                 if (mock) { server.respond(); }
             });
 
-            it("Appel du service en mode 'XHR' avec la méthode 'POST' au format de sortie 'xml'", function (done) {
-                // description du test
-                //
-                var urlXPost = "http://wxs.ign.fr/" + myKey + "/isochrone/isochrone.xml?gp-access-lib=" + version;
-                var okResponseXml = [200, { 'Content-type': 'application/xml' }, processisocurveResponseXml];
-                if (mock) { server.respondWith('POST', urlXPost, okResponseXml); }
-
-                options.protocol = 'XHR';
-                options.httpMethod = 'POST';
-                options.outputFormat = 'xml';
-                options.onSuccess = function (response) {
-                    functionAssert(response);
-                    done();
-                };
-                options.onFailure = function (error) {
-                    console.log(error);
-                    done(error);
-                };
-
-                Gp.Services.isoCurve(options);
-                if (mock) { server.respond(); }
-            });
         });
 
         describe("Test sur les options spécifiques du service", function () {

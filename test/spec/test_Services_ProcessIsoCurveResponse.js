@@ -1,7 +1,6 @@
 /*
 * Tests sur les propriétés de la classe de réponse de calcul d'isochrones (ProcessIsoCurveResponse).
 */
-import { assert } from "chai";
 import { expect } from "chai";
 import { should } from "chai";
 should();

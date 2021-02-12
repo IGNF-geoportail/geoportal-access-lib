@@ -31,49 +31,40 @@ function ProcessIsoCurveParam (options) {
     /** Identifiant de l’isochrone */
     this.id = this.options.id;
 
+    /** Resource */ 
+    this.resource = this.options.resource;
+
     /** Coordonnées de départ (ou arrivée si le reverse est à true). */
-    this.location = this.options.position;
+    this.point = this.options.position;
 
     /** projection (code EPSG comme epsg:4326 ou wgs84) */
-    this.srs = this.options.srs;
+    this.crs = this.options.srs;
 
     /**
      * Profil de véhicule à utiliser pour le calcul.
      * Voiture ou Pieton
      */
-    this.graphName = this.options.graph;
-
-    /**
-     * Identifiant et nom du véhicule
-     * FIXME non utilisé
-     */
-    this.profileId = this.options.profileId || null; // TODO !
-    this.profileName = this.options.profileName || null; // TODO !
+    this.profile = this.options.graph;
 
     /** Liste des règles de restrictions à utiliser */
-    this.exclusions = this.options.exclusions;
+    this.constraints = this.options.constraints;
 
     this.reverse = this.options.reverse;
-    this.smoothing = this.options.smoothing;
-    this.holes = this.options.holes;
+
+    this.timeUnit = this.options.timeUnit;
+
+    this.distanceUnit = this.options.distanceUnit;
 
     /**
      * "time" pour isochrone ou "distance" for isodistance.
      * Par defaut, time...
      */
-    var value = this.options.method;
-    switch (value) {
-        case "time":
-            this.method = "time";
-            this.time = this.options.time;
-            break;
-        case "distance":
-            this.method = "distance";
-            this.distance = this.options.distance;
-            break;
-        default:
-            this.logger.warn("Par defaut, on calcule un isochrone !");
-            this.method = "time";
+    if (this.options.method === "distance") {
+        this.costType = "distance";
+        this.costValue = this.options.distance;
+    } else {
+        this.costType = "time";
+        this.costValue = this.options.time;
     }
 }
 
@@ -94,19 +85,52 @@ ProcessIsoCurveParam.prototype = {
     constructor : ProcessIsoCurveParam,
 
     /**
-     * Retourne la liste des exclusions
+     * Retourne le point
      * @returns {String} x,y
      */
     getLocation : function () {
-        return this.location.x + "," + this.location.y;
+        return this.point.x + "," + this.point.y;
     },
 
     /**
-     * Retourne la liste des exclusions
-     * @returns {String} exclusions
+     * Retourne l'unité de la distance
+     * @returns {String} 
      */
-    getExclusions : function () {
-        return this.exclusions.join(";");
+    getDistanceUnit : function () {
+        if (this.distanceUnit === "m") {
+            return "meter";
+        }
+        if (this.distanceUnit === "km") {
+            return "kilometer";
+        }
+        return "";
+    },
+
+    /**
+     * Retourne la liste des contraintes
+     * @returns {String} 
+     */
+    getConstraints : function () {
+        var constraintArray = [];
+
+        if (this.constraints.length !== 0) {
+            for (var k = 0; k < this.constraints.length; k++) {
+                constraintArray.push(JSON.stringify(this.constraints[k]));
+            }
+        }
+        return constraintArray.join("|");
+    },
+
+    /**
+     * Retourne la direction
+     * @returns {String} 
+     */
+    getDirection : function () {
+        if (this.reverse) {
+            return "arrival";
+        } else {
+            return "departure";
+        }
     }
 };
 
@@ -119,60 +143,56 @@ ProcessIsoCurveParam.prototype.getParams = function () {
     var map = [];
 
     map.push({
-        k : "location",
+        k : "resource",
+        v : this.resource
+    });
+
+    map.push({
+        k : "point",
         v : this.getLocation()
     });
 
     map.push({
-        k : "smoothing",
-        v : this.smoothing
+        k : "direction",
+        v : this.getDirection()
     });
 
     map.push({
-        k : "holes",
-        v : this.holes
+        k : "costType",
+        v : this.costType
     });
 
     map.push({
-        k : "reverse",
-        v : this.reverse
+        k : "costValue",
+        v : this.costValue
     });
 
     map.push({
-        k : "method",
-        v : this.method
+        k : "profile",
+        v : this.profile
     });
 
-    if (this.time) {
+    map.push({
+        k : "timeUnit",
+        v : this.timeUnit
+    });
+
+    map.push({
+        k : "distanceUnit",
+        v : this.getDistanceUnit()
+    });
+
+    if (this.crs) {
         map.push({
-            k : "time",
-            v : this.time
+            k : "crs",
+            v : this.crs
         });
     }
 
-    if (this.distance) {
+    if (this.constraints) {
         map.push({
-            k : "distance",
-            v : this.distance
-        });
-    }
-
-    map.push({
-        k : "graphName",
-        v : this.graphName
-    });
-
-    if (this.exclusions) {
-        map.push({
-            k : "exclusions",
-            v : this.getExclusions()
-        });
-    }
-
-    if (this.srs) {
-        map.push({
-            k : "srs",
-            v : this.srs
+            k : "constraints",
+            v : this.getConstraints()
         });
     }
 

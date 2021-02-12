@@ -228,19 +228,23 @@ var Services = {
      * @method isoCurve
      * @param {Object} options - Options for function call.
      * @param {String} options.apiKey - Access key to Geoportal platform, obtained [here]{@link http://professionnels.ign.fr/ign/contrats}.
+     * @param {String} options.resource - Resource used to compute the route. Available values are in the GetCapabilities.
      * @param {Gp.Point} options.position - Start or Arrival (options.reverse===true) Point for the computing. Expressed in CRS:84 coordinates system (position.x corresponds to longitude, position.y corresponds to latitude).
-     * @param {String} [options.graph = "Voiture"] - User profile to use to compute the isoCurve : "Voiture" (using a vehicule) or "Pieton" (pedestrian). Has an influence on the kind of roads to use and the average speed.
-     * @param {Array.<String>} [options.exclusions] - Indicates if route has to avoid some features ("toll", "bridge" or "tunnel").
-     * @param {String} [options.method = "time"] - Computing method to use : "time" (using a duration as a constraint) or "distance" (using a distance as a constraint).
+     * @param {String} [options.graph = "Voiture"] - User profile to use to compute the isoCurve : "Voiture" (using a vehicule) or "Pieton" (pedestrian). Has an influence on the kind of roads to use and the average speed. Available values are in the GetCapabilities.
+     * @param {Array.<String>} [options.exclusions] - DEPRECATED: use options.constraints. Indicates if route has to avoid some features ("toll", "bridge" or "tunnel").
+     * @param {Array.<Object>} [options.constraints] - Constraints used ({'constraintType':'banned','key':'ways_type','operator':'=','value':'autoroute'}). Available values are in the GetCapabilities.
+     * @param {String} [options.method = "time"] - Computing method to use : "time" (using a duration as a constraint) or "distance" (using a distance as a constraint). Available values are in the GetCapabilities.
      * @param {Float} options.time - Maximum duration (expressed in seconds) to use when options.method is set to "time".
      * @param {Float} options.distance - Maximum distance (expressed in meters) to use when options.method is set to "distance".
      * @param {Boolean} [options.reverse = false] - Set this parameter to true if you want options.position to be the destination (instead of departure) for the computing.
-     * @param {Boolean} [options.smoothing = false] - Set this parameter to true if you want the resulting geometry to be smoothed.
-     * @param {Boolean} [options.holes = false] - Set this parameter to true if you want the resulting geometry (polygon) to have holes if pertinent.
+     * @param {String} [options.distanceUnit = "km"] - The unit used to provide distances in the response ("m" or "km").
+     * @param {String} [options.timeUnit = "standard"] - The unit used to provide duration in the response ("standard", "second", "minute", "hour").
+     * @param {Boolean} [options.smoothing = false] - DEPRECATED: Set this parameter to true if you want the resulting geometry to be smoothed.
+     * @param {Boolean} [options.holes = false] - DEPRECATED: Set this parameter to true if you want the resulting geometry (polygon) to have holes if pertinent.
      * @param {Function} options.onSuccess - Callback function for getting successful service response. Takes a {@link Gp.Services.IsoCurveResponse} object as a parameter except if "rawResponse" is set to true.
      * @param {Function} [options.onFailure] - Callback function for handling unsuccessful service responses (timeOut, missing rights, ...). Takes a {@link Gp.Error} object as parameter.
      * @param {Number} [options.timeOut=0] - Number of milliseconds above which a timeOut response will be returned with onFailure callback (see above). Default value is 0 which means timeOut will not be handled.
-     * @param {String} [options.outputFormat='json'] - Output format ("json" or "xml") to use for underlying webService. Only use if you know what you are doing.
+     * @param {String} [options.outputFormat='json'] - Output format ("json") to use for underlying webService. Only use if you know what you are doing.
      * @param {String} [options.serverUrl=http (s)://wxs.ign.fr/APIKEY/isochrone/isochrone.json] - Web service URL. If used, options.apiKey parameter is ignored. Only use if you know what you're doing.
      * @param {Boolean} [options.ssl = true] - Use of HTTPS or HTTP protocol to request the services. HTTPS by default (ssl=true).
      * @param {String} [options.protocol=XHR] - Protocol used to handle dialog with web service. Possible values are 'JSONP' ({@link https://en.wikipedia.org/wiki/JSONP}) and 'XHR' ({@link https://en.wikipedia.org/wiki/XMLHttpRequest}). Only XHR protocol is supported in a NodeJS environment. Only use if you know what you're doing.

@@ -6,6 +6,7 @@ import CommonService from "../CommonService";
 import DefaultUrlService from "../DefaultUrlService";
 import ProcessIsoCurveRequest from "./Request/ProcessIsoCurveRequest";
 import ProcessIsoCurveResponseFactory from "./Response/ProcessIsoCurveResponseFactory";
+import TileMatrixSet from "../AutoConf/Response/model/TileMatrixSet";
 
 /**
  * @classdesc
@@ -17,11 +18,10 @@ import ProcessIsoCurveResponseFactory from "./Response/ProcessIsoCurveResponseFa
  * @extends {Gp.Services.CommonService}
  * @alias Gp.Services.ProcessIsoCurve
  * @param {Object} options - options spécifiques au service (+ les options heritées)
+ * 
+ * @param {String} options.resource - La ressource utilisée pour le calcul. Ce paramètre devrait être obligatoire car il l'est dans l'appel au service. Mais il ne l'est pas pour des raisons de rétrocompatibilité.
  *
- * @param {String} options.outputFormat - Le format de la réponse du service iso : 'xml' ou 'json'.
- *      Ce paramètre déterminera l'extension '.xml' ou '.json' du service.
- *      Nécessaire si serverUrl est renseigné pour connaître le format dans lequel sera fournie la réponse (pour son traitement).
- *      Par défaut, ce paramètre vaut 'json'.
+ * @param {String} options.outputFormat - Le format de la réponse du service iso : 'json' uniquement et par défaut.
  *
  * @param {Object} options.position - Point de départ du calcul.
  *      Coordonnées exprimées en longitudes, latitudes (EPSG:4326)
@@ -36,14 +36,25 @@ import ProcessIsoCurveResponseFactory from "./Response/ProcessIsoCurveResponseFa
  * @param {String} [options.graph = "voiture"] - Nom du graphe à utiliser pour le calcul (« Pieton » ou « Voiture »).
  *      La valeur par défaut est : «voiture»
  *
- * @param {Array.<String>} [options.exclusions] - Critères d'exclusions à appliquer pour le calcul.
+ * @param {Array.<String>} [options.exclusions] - DEPRECATED: Ce paramètre est conservé pour une rétrocompatibilité de l'api. Le nouveau paramètre à utiliser est options.constraints.
+ *      Critères d'exclusions à appliquer pour le calcul.
  *      On précise ici le type de tronçons que l'on ne veut pas que l'isochrone/distance emprunte
  *      (valeurs possibles : « toll » (éviter les péages), « bridge », « tunnel »).
  *
+ * @param {Object[]} [options.constraints] - Critères de contraintes à appliquer sur un itinéraire. Les valeurs disponibles dépendent de la ressource utilisée. Il est donc utile de regarder le getCapabilities.
+ *      @param {String} [options.constraints.constraintType] - Type de la contrainte. Généralement "banned".
+ *      @param {String} [options.constraints.key] - Clé de la contrainte. Généralement "wayType".
+ *      @param {String} [options.constraints.operator] - Opérateur de la contrainte. Généralement "=".
+ *      @param {String} [options.constraints.value] - Valeur de la contrainte. Généralement "autoroute".
+ * 
  * @param {String} [options.method = "time"] - Méthode utilisée pour le calcul de la courbe iso.
  *      Les valeurs possible sont "time" pour un calcul d'isochrone, "distance" pour un calcul d'isodistance.
  *      Pas de valeur spécifié équivaut à un calcul d'isochrone.
- *
+ * 
+ * @param {String} [options.distanceUnit = "km"] - Indique si la distance doit être exprimée en km ou m dans la réponse ("m" or "km").
+ * 
+ * @param {String} [options.timeUnit = "standard"] - Indique si la durée doit être exprimée en seconde, minute ou heure dans la réponse ("standard", "second", "minute", "hour"). Il peut-être formatté hh:mm::ss avec la valeur standard.
+ * 
  * @param {Float} options.time - Durée maximum (exprimée en secondes) à utiliser pour le calcul de la courbe à partir du ou jusqu'au point « location ».
  *      Ce paramètre doit être renseigné si l'option "méthod" a la valeur "time".
  *      Si l'option method n'est pas renseignée, ce paramètre doit être renseigné.
@@ -82,11 +93,8 @@ import ProcessIsoCurveResponseFactory from "./Response/ProcessIsoCurveResponseFa
  *      distance : 200,
  *      [time : ]
  *      method : "distance",
- *      exclusions : ["Bridge", "Tunnel", "Toll"],
  *      graph : "voiture",
- *      reverse : false,
- *      smoothing : false,
- *      holes : false
+ *      reverse : false
  *  };
  * @private
  */
@@ -149,22 +157,98 @@ function ProcessIsoCurve (options) {
     this.options.method = this.options.method || "time";
 
     // options par defaut du service
-    this.options.exclusions = options.exclusions || null;
-    this.options.graph = options.graph || "Voiture"; // TODO test de la valeur à faire !
+    // TODO: modifier la ressource lors de la mise en production du service
+    this.options.resource = options.resource || "bduni-idf-pgr";
+    this.options.exclusions = options.exclusions || [];
     this.options.reverse = options.reverse || false;
-    this.options.smoothing = options.smoothing || false;
-    this.options.holes = options.holes || false;
     this.options.srs = options.srs || "EPSG:4326";
+    this.options.distanceUnit = options.distanceUnit || "km";
+    this.options.timeUnit = options.timeUnit || "standard";
+
+    //options depreciees
+    if (options.smoothing) {
+        this.logger.warn("options.smoothing is DEPRECATED");
+    } 
+    this.options.smoothing = false;
+    if (options.holes) {
+        this.logger.warn("options.holes is DEPRECATED");
+    } 
+    this.options.holes = false;
+
+    // Gestion du graphe
+    if (options.graph) {
+        if (options.graph === "Voiture") {
+            this.options.graph = "car";
+        }
+        if (options.graph === "Pieton") {
+            this.options.graph = "pedestrian";
+        }
+    } else {
+        this.options.graph = "car";
+    }
+
+    // Gestions des contraintes 
+    this.options.constraints = [];
+    if (options.constraints) {
+        if (Array.isArray(options.constraints)) {
+            for (var k = 0; k < options.constraints.length; k++) {
+                this.options.constraints.push(options.constraints[k]);
+            }
+        } else {
+            throw new Error(_.getMessage("PARAM_TYPE", "constraints"));
+        }
+    }
+
+    // Gestion de l'ancien paramètre exclusions
+    var constraintTunnel = {};
+    var constraintPont = {};
+    var constraintAutoroute = {};
+    if (options.exclusions) {
+        if (options.exclusions.length !== 0) {
+            this.logger.warn("options.exclusions is DEPRECATED !!");
+            for(var c = 0; c < options.exclusions.length; c++) {
+                if (typeof options.exclusions[c] === "string") {
+                    options.exclusions[c] = options.exclusions[c].toLowerCase();
+                } else {
+                    // on ne crée pas une erreur pour rétro-compatibilité avec les anciennes versions
+                    continue;
+                }
+                if (options.exclusions[c] === "toll") {
+                    constraintAutoroute.constraintType = "banned";
+                    constraintAutoroute.key = "wayType";
+                    constraintAutoroute.operator = "=";
+                    constraintAutoroute.value = "autoroute";
+                    this.options.constraints.push(constraintAutoroute);
+                }
+                if (options.exclusions[c] === "tunnel") {
+                    constraintTunnel.constraintType = "banned";
+                    constraintTunnel.key = "wayType";
+                    constraintTunnel.operator = "=";
+                    constraintTunnel.value = "tunnel";
+                    this.options.constraints.push(constraintTunnel);
+                }
+                if (options.exclusions[c] === "bridge") {
+                    constraintPont.constraintType = "banned";
+                    constraintPont.key = "wayType";
+                    constraintPont.operator = "=";
+                    constraintPont.value = "pont";
+                    this.options.constraints.push(constraintPont);
+                }
+            }
+        }
+    }
 
     // on passe l'option outputFormat en minuscules afin d'éviter des exceptions.
     this.options.outputFormat = (typeof options.outputFormat === "string") ? options.outputFormat.toLowerCase() : "json";
+    if (options.outputFormat && options.outputFormat !== "json") {
+        throw new Error(_.getMessage("PARAM_NOT_SUPPORT", "outputFormat"));
+    }
+    this.options.outputFormat = "json";
 
     // gestion de l'url du service par defaut
     // si l'url n'est pas renseignée, il faut utiliser les urls par defaut
     if (!this.options.serverUrl) {
-        var lstUrlByDefault = DefaultUrlService.ProcessIsoCurve.url(this.options.apiKey);
-
-        var urlFound = lstUrlByDefault["iso" + "-" + this.options.outputFormat];
+        var urlFound = DefaultUrlService.ProcessIsoCurve.url(this.options.apiKey);
         if (!urlFound) {
             throw new Error("Url by default not found !");
         }
@@ -172,23 +256,6 @@ function ProcessIsoCurve (options) {
         this.logger.trace("Serveur URL par defaut : " + this.options.serverUrl);
     }
 
-    // gestion du type de service
-    // si l'extension de l'url est .json ou .xml, on surcharge le format de sortie (outputFormat)
-    var idx = this.options.serverUrl.lastIndexOf(".");
-    if (idx !== -1) {
-        var extension = this.options.serverUrl.substring(idx + 1);
-        if (extension && extension.length < 5) { // FIXME extension de moins de 4 car. ...
-            this.logger.trace("Serveur Extension URL : " + extension);
-            switch (extension.toLowerCase()) {
-                case "json":
-                case "xml":
-                    this.options.outputFormat = extension.toLowerCase();
-                    break;
-                default:
-                    throw new Error("type of service : unknown or unsupported (json or xml) !");
-            }
-        }
-    }
 }
 
 /**
