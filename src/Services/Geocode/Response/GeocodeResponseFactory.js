@@ -1,20 +1,17 @@
 /**
  * Factory pour générer une reponse JSON à partir d'un XML
- * ou d'un JSON encapsulant du XML
  * (Factory)
  *
  * @module GeocodeResponseFactory
  * @alias Gp.Services.Geocode.Response.GeocodeResponseFactory
- * @todo La reponse JSON peut encapsuler un XML !
  * @private
  */
 // import Logger from "../../../Utils/LoggerByDefault";
 import ErrorService from "../../../Exceptions/ErrorService";
 import MRes from "../../../Utils/MessagesResources";
-import XML from "../../../Formats/XML";
-import DirectGeocodeResponseReader from "../Formats/DirectGeocodeResponseReader";
+import GeocodeResponseParser from "../Formats/GeocodeResponseParser";
 
-var DirectGeocodeReponseFactory = {
+var GeocodeReponseFactory = {
 
     /**
      * interface unique
@@ -42,17 +39,8 @@ var DirectGeocodeReponseFactory = {
                 data = options.response;
             } else {
                 try {
-                    var p = new XML({
-                        reader : DirectGeocodeResponseReader
-                    });
-
-                    if (typeof options.response === "string") {
-                        p.setXMLString(options.response);
-                    } else {
-                        p.setXMLDoc(options.response);
-                    }
-
-                    data = p.parse();
+                    const parser = new GeocodeResponseParser();
+                    data = parser.parse(options.response);
 
                     if (!data) {
                         throw new Error("L'analyse de la réponse du service !?");
@@ -95,4 +83,4 @@ var DirectGeocodeReponseFactory = {
     }
 };
 
-export default DirectGeocodeReponseFactory;
+export default GeocodeReponseFactory;

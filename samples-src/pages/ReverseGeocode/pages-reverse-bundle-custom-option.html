@@ -1,0 +1,175 @@
+{{#extend "layout-sample-bundle"}}
+
+{{#content "head"}}
+        <title>Service de geocodage</title>
+{{/content}}
+
+{{#content "style"}}
+    <style>
+        #optionUser {
+            width: 400px;
+            height: 500px;
+            float: left;
+        }
+        #optionOldGeocode {
+            width: 400px;
+            height: 500px;
+            float: left;
+        }
+        #optionNewGeocode {
+            width: 400px;
+            height: 500px;
+            float: left;
+        }
+        #optionObject {
+            width: 390px;
+            overflow: auto;
+            height: 383px;
+        }
+        #oldCode {
+            overflow: scroll;
+            height: 406px;
+        }
+        #newCode {
+            overflow: scroll;
+            height: 406px;
+        }
+        #resultDiv {
+            float: left;
+            width: 100%;
+        }
+        textarea {
+            resize: none;
+        }
+    </style>
+{{/content}}
+
+{{#content "body"}}
+        <h1>Paramétrage du Service de geocodage inverse</h1>
+
+        <h4>Indexes et filtres:</h4>
+        <pre>
+- CadastralParcel
+   * identifiant
+   * codeDepartement
+   * codeCommune
+   * nomCommune
+   * codeCommuneAbs
+   * codeArrondissement
+   * section
+   * numero
+   * feuille
+- PositionOfInterest
+   * type
+   * postalCode
+   * inseeCode
+- StreetAddress
+   * city
+   * postalCode
+   * inseeCode
+        </pre>
+        <div id="optionUser">
+            <h3>Ecrire ici l'objet de paramétrage du service:</h3>
+            <p>var option =</p>
+            </br>
+            <textarea id="optionObject">
+{
+    "index" : "StreetAddress",
+    "filters" : {
+        "postalCode": 75002
+    },
+    "returnTrueGeometry" : "false",
+    "searchGeometry" : {
+        "type" : "Circle",
+        "coordinates" : [
+            2.35,
+            48.87
+        ],
+        "radius" : 100
+    }
+}</textarea>
+        </div>
+
+        <div id="optionOldGeocode">
+            <h3>Exemple de paramètrage de l'ancien service:</h3>
+            <p>var option =</p>
+            <div id="oldCode">
+            <pre>
+<code>{
+    "apiKey" : "{{ apikey }}",
+    "filterOptions" : {
+        "type" : ["CadastralParcel"],
+        "circle" : {
+            "x" : 2.35,
+            "y" : 48.87,
+            "radius" : 100
+        }
+    },
+    "maximumResponses" : 2,
+    "position" : {
+      "lon" : 2.36,
+      "lat" : 48.87
+    }
+}
+</code>
+            </pre>
+            </div>
+        </div>
+        <div id="optionNewGeocode">
+            <h3>Exemple de paramètrage du nouveau service:</h3>
+            <p>var option =</p>
+            <div id="oldCode">
+            <pre>
+<code>{
+    "index" : "CadastralParcel",
+    "filters" : {
+        "codeDepartement" : "75",
+        "codeCommune" : "056"
+    },
+    "maximumResponses" : 2,
+    "returnTrueGeometry" : true,
+    "searchGeometry" : {
+      "type" : "Circle",
+      "coordinates" : [
+        2.35,
+        48.87
+      ],
+      "radius" : 100
+    },
+    "position" : {
+      "lon" : 2.36,
+      "lat" : 48.87
+    }
+}
+</code>
+            </pre>
+            </div>
+        </div>
+
+        <div id="resultDiv">
+        </br>
+        <button type="button" id="geocodeButton">GO!</button>
+        </br>
+        </br>
+        <h3>Resultat retourné par Gp.Services.reverseGeocode(options):</h3>
+        </div>
+{{/content}}
+
+{{#content "js"}}
+        var reverseGeocodeAction = function () {
+            var optionText = document.getElementById("optionObject").value;
+            var optionObject = JSON.parse(optionText);
+
+            optionObject.onSuccess = function (response) {
+                print(response.locations);
+            };
+            optionObject.onFailure = function (error) {
+                print(error);
+            };
+
+            Gp.Services.reverseGeocode(optionObject);
+        };
+
+        document.getElementById("geocodeButton").onclick = reverseGeocodeAction;
+{{/content}}
+{{/extend}}

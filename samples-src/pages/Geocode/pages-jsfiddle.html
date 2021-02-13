@@ -77,7 +77,7 @@
                 Gp.Services.geocode({
                     apiKey: "{{ apikey }}",
                     location: location,
-                    filterOptions: fo,
+                    filters: fo,
                     onSuccess: function(result) {
                         resultDiv.innerHTML = "<p>" + JSON.stringify(result) + "</p>"
                     },

@@ -30,10 +30,6 @@
 *     - {@link Gp.Services.AutoCompleteResponse .AutoCompleteResponse()}
 *     - {@link Gp.Services.Config .Config()}
 *     - {@link Gp.Services.DefaultUrl .DefaultUrl()}
-*     - .Geocode
-*         - {@link Gp.Services.Geocode.GeocodedLocation .GeocodedLocation()}
-*         - {@link Gp.Services.Geocode.ReverseGeocodedLocation .ReverseGeocodedLocation()}
-*         - {@link Gp.Services.Geocode.DirectGeocodedLocation .DirectGeocodedLocation()}
 *     - {@link Gp.Services.GeocodeResponse .GeocodeResponse()}
 *     - {@link Gp.Services.GetConfigResponse .GetConfigResponse()}
 *     - {@link Gp.Services.IsoCurveResponse .IsoCurveResponse()}
@@ -76,10 +72,6 @@ import Thematic from "./Services/AutoConf/Response/model/Thematic";
 import TM from "./Services/AutoConf/Response/model/TileMatrix";
 import TMLimit from "./Services/AutoConf/Response/model/TileMatrixLimit";
 import TMS from "./Services/AutoConf/Response/model/TileMatrixSet";
-import GeocodeResponse from "./Services/Geocode/Response/model/GeocodeResponse";
-import GeocodedLocation from "./Services/Geocode/Response/model/GeocodedLocation";
-import DirectGeocodedLocation from "./Services/Geocode/Response/model/DirectGeocodedLocation";
-import ReverseGeocodedLocation from "./Services/Geocode/Response/model/ReverseGeocodedLocation";
 import IsoCurveResponse from "./Services/ProcessIsoCurve/Response/model/ProcessIsoCurveResponse";
 import RouteResponse from "./Services/Route/Response/model/RouteResponse";
 import RouteInstruction from "./Services/Route/Response/model/RouteInstruction";
@@ -131,12 +123,6 @@ Gp.Services.Config.Thematic = Thematic;
 Gp.Services.Config.TileMatrix = TM;
 Gp.Services.Config.TileMatrixLimit = TMLimit;
 Gp.Services.Config.TileMatrixSet = TMS;
-// Export Geocode
-Gp.Services.GeocodeResponse = GeocodeResponse;
-Gp.Services.Geocode = {};
-Gp.Services.Geocode.GeocodedLocation = GeocodedLocation;
-Gp.Services.Geocode.DirectGeocodedLocation = DirectGeocodedLocation;
-Gp.Services.Geocode.ReverseGeocodedLocation = ReverseGeocodedLocation;
 // Export IsoCurve
 Gp.Services.IsoCurveResponse = IsoCurveResponse;
 // Export Route

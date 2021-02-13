@@ -14,13 +14,26 @@
         <pre>
           <code>
             var options = {
-                apiKey : "{{ apikey }}",
+                // apiKey : "{{ apikey }}",
                 onSuccess : function (response) {
                     print(response);
                 },
-                position : {
-                   x : 2.35,
-                   y : 48.87
+                onFailure : function (error) {
+                    print(error);
+                },
+                index : "CadastralParcel",  // CadastralParcel, PositionOfInterest, StreetAddress
+                filters: {
+                    // codeDepartement : "75",
+                    // codeCommune : "056",
+                    // postalCode: 75002,
+                },
+                searchGeometry : {
+                  type : "Circle",
+                  coordinates : [
+                    2.35,
+                    48.87
+                  ],
+                  radius : 100
                 }
             };
             Gp.Services.reverseGeocode(options);
@@ -30,13 +43,32 @@
 
 {{#content "js"}}
         var options = {
-            apiKey : "{{ apikey }}",
+            // apiKey : "{{ apikey }}",
             onSuccess : function (response) {
                 print(response);
             },
+            onFailure : function (error) {
+                print(error);
+            },
+            //index : "CadastralParcel",  // CadastralParcel, PositionOfInterest, StreetAddress
+            filters: {
+                // codeDepartement : "75",
+                // codeCommune : "056",
+                // postalCode: 75002,
+            },
+            maximumResponses : 2,
+            returnTrueGeometry : true,
+            searchGeometry : {
+              type : "Circle",
+              coordinates : [
+                2.35,
+                48.87
+              ],
+              radius : 100
+            },
             position : {
-               x : 2.35,
-               y : 48.87
+              lon : 2.36,
+              lat : 48.87
             }
         };
         Gp.Services.reverseGeocode(options);

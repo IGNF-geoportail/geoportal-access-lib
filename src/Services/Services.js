@@ -77,7 +77,7 @@ var Services = {
      * @example
      * Gp.Services.geocode ({
      *     apiKey : "jhyvi0fgmnuxvfv0zjzorvdn",
-     *     location : "73 avenue de Paris, Saint-Mandé",
+     *     query : "73 avenue de Paris, Saint-Mandé",
      *     // traitement des resultats
      *     onSuccess  : function (result) {
      *         console.log("found (x:"+result.position.x+", y:"+result.position.y+")") ;
@@ -88,41 +88,28 @@ var Services = {
      * @method geocode
      * @param {Object} options - Options for function call.
      * @param {String} options.apiKey - Access key to Geoportal platform, obtained [here]{@link http://professionnels.ign.fr/ign/contrats}.
-     * @param {String|Object} options.location - Geographic identifier to locate. May be provided as a single String or a structured Object for an address search. In this last case, the following properties are availaibles.
-     *      @param {Number} [options.location.number] - Street number.
-     *      @param {String} [options.location.street] - Street name.
-     *      @param {String} [options.location.city] - City name.
-     *      @param {Number} [options.location.postalCode] - Postal Code
-     * @param {Object} [options.filterOptions] - Additional filters to apply to search. The following properties may be given.
-     *      @param {Gp.BBox} [options.filterOptions.bbox] - Bounding box where to perform the search. Properties expressed in options.srs coordinates system.
-     *      @param {Array.<String>} [options.filterOptions.type] - Geographical identifier types to search. Values currently availables are : "PositionOfInterest" for place names, "StreetAddress" for address search, "CadastralParcel" for Cadastral parcels search. Default is "StreetAddress".
-     *
-     *      @param {String} [options.filterOptions.[prop]] - Additionnal properties to filter search. Properties depends on options.filterOptions.type, and values type should be "String".
-     *      <br/><br/>
-     *      Common Properties availables for all search types :<br/>
-     *      "municipality", "insee", "department".
+     * @param {String} [options.index="StreetAddress"] - Geographical identifier type to search. Values currently availables are : "PositionOfInterest" for place names, "StreetAddress" for address search, "CadastralParcel" for Cadastral parcels search, "location" for a multi-index search on "StreetAddress" and "PositionOfInterest". Default is "StreetAddress".
+     * @param {String} options.query - Geographic identifier to locate.
+     * @param {Object} [options.filters] - Additional filters to apply to search. The following properties may be given.
+     *      @param {String} [options.filters.[prop]] - Additionnal properties to filter search. Properties depends on options.index, and values type should be "String".
      *      <br/><br/>
      *      Properties availables for address search :<br/>
-     *      "quality", "ID", "ID_TR" and "territory".
+     *      "postalCode", "inseeCode" and "city".
      *      <br/><br/>
      *      Properties availables for place names search :<br/>
-     *      "importance", "nature" and "territory".
+     *      "postalCode", "inseeCode" and "type".
      *      <br/><br/>
      *      Properties availables for cadastral parcels search :<br/>
-     *      "sheet", "section", and "absorbedcity".
-     * @param {Number} [options.maximumResponses = 25] - Maximum number of responses. Default underlying service value applies (25) if not provided.
-     * @param {Boolean} [options.returnFreeForm = false] - Set this parameter to true if you wish to have an address returned in a single String (unstructured). If unset, default underlying service value (false) applies.
-     * @param {String} [options.srs = EPSG:4326] - Coordinates System used to expres coordinates for parameters and responses. Default underlying service value (EPSG:4326) applies.
+     *      "codeDepartement", "codeCommune", "nomCommune", "codeCommuneAbs", "codeArrondissement", "section", "numero", "feuille".
+     * @param {Number} [options.maximumResponses=20] - Maximum number of responses. Default underlying service value applies (20) if not provided.
+     * @param {Boolean} [options.returnTrueGeometry=false] - Set this parameter to true if you wish to have the true geometrie returned.
      * @param {Function} options.onSuccess - Callback function for getting successful service response. Takes a {@link Gp.Services.GeocodeResponse} object as a parameter except if "rawResponse" is set to true.
      * @param {Function} [options.onFailure] - Callback function for handling unsuccessful service responses (timeOut, missing rights, ...). Takes a {@link Gp.Error} object as parameter.
      * @param {Number} [options.timeOut=0] - Number of milliseconds above which a timeOut response will be returned with onFailure callback (see above). Default value is 0 which means timeOut will not be handled.
      * @param {String} [options.serverUrl=http (s)://wxs.ign.fr/APIKEY/geoportail/ols] - Web service URL. If used, options.apiKey parameter is ignored. Only use if you know what you're doing.
      * @param {Boolean} [options.ssl = true] - Use of HTTPS or HTTP protocol to request the services. HTTPS by default (ssl=true).
-     * @param {String} [options.protocol=XHR] - Protocol used to handle dialog with web service. Possible values are 'JSONP' ({@link https://en.wikipedia.org/wiki/JSONP}) and 'XHR' ({@link https://en.wikipedia.org/wiki/XMLHttpRequest}). Only XHR protocol is supported in a NodeJS environment. Only use if you know what you're doing.
      * @param {String} [options.proxyURL] - Proxy URL to use when requesting underlying web service. Ignored when options.protocol is set to 'JSONP' value. Only use if you know what you're doing.
      * @param {String} [options.callbackSuffix] - Callback function name suffix to use in case of a JSONP protocol use (see above), to set your own suffix instead of auto-increment. Ignored when options.protocol is set to 'XHR' value. Only use if you know what you're doing.
-     * @param {String} [options.httpMethod=GET] - HTTP method to use when requesting underlying web service in case of a XHR protocol use (see above). Possible values are 'GET' and 'POST'. Ignored when options.protocol is set to 'JSONP' value. Only use if you know what you are doing.
-     * @param {String} [options.contentType="application/xml"] - Content-Type to use when requesting underlying web service in case of a XHR protocol use (see above) and if method HTTP is POST. Ignored when options.protocol is set to 'JSONP' value. Only use if you know what you are doing.
      * @param {Boolean} [options.rawResponse=false] - Setting this parameter to true implies you want to handle the service response by yourself : it will be returned as an unparsed String in onSuccess callback parameter. Only use if you know what you are doing.
      * @param {Function} [options.onBeforeParse] - Callback function for handling service response before parsing (as an unparsed String). Takes a String as a parameter (the raw service response). Returns a String that will be parsed as the service response. Only use if you know what you are doing.
      */
@@ -136,25 +123,33 @@ var Services = {
      * @method reverseGeocode
      * @param {Object} options - Options for function call.
      * @param {String} options.apiKey - Access key to Geoportal platform, obtained [here]{@link http://professionnels.ign.fr/ign/contrats}.
-     * @param {Gp.Point} options.position - Reference position where to search geographical identifiers. Its coordinates are expressed in the coordinates system given with options.srs parameter. (default is CRS:84, that means position.x is the longitude and position.y the latitude)
-     * @param {Object} [options.filterOptions] - Additional filters to apply to search. The following properties may be given.
-     *      @param {Array.<String>} [options.filterOptions.type] - Geographical identifier types to search. Values currently availables are : "PositionOfInterest" for place names, "StreetAddress" for address search, "CadastralParcel" for Cadastral parcels search. Default is "StreetAddress".
-     *      @param {Gp.BBox} [options.filterOptions.bbox] - Bounding box where to perform the search. Expressed in options.srs coordinates system.
-     *      @param {Gp.Circle} [options.filterOptions.circle] - Circle where to perform the search. Expressed in options.srs coordinates system.
-     * @param {Array.<Gp.Point>} [options.filterOptions.polygon] - Polygon where to perform the search. Expressed in options.srs coordinates system.
-     * @param {Number} [options.maximumResponses] - Maximum number of responses. Default underlying service value applies (25) if not provided.
-     * @param {Boolean} [options.returnFreeForm = false] - Set this parameter to true if you wish to have an address returned in a single String (unstructured). If unset, default underlying service value (false) applies.
-     * @param {String} [options.srs = CRS:84] - Coordinates System used to express coordinates for parameters and responses. Only WGS 84 geographical positioning is supported. Therefore, two values are allowed : "CRS:84" (position.x is the longitude and position.y the latitude) and "EPSG:4326" (position.x is the latitude and position.y the longitude) . Default is CRS:84.
+     * @param {String} [options.index="StreetAddress"] - Geographical identifier type to search. Values currently availables are : "PositionOfInterest" for place names, "StreetAddress" for address search, "CadastralParcel" for Cadastral parcels search, "location" for a multi-index search on "StreetAddress" and "PositionOfInterest". Default is "StreetAddress".
+     * @param {Object} options.position - Reference position where to search geographical identifiers.
+     *      @param {Float} options.position.lon - Longitude
+     *      @param {Float} options.position.lat - Latitude
+     * @param {Object} [options.filters] - Additional filters to apply to search. The following properties may be given.
+     *      @param {String} [options.filters.[prop]] - Additionnal properties to filter search. Properties depends on options.index, and values type should be "String".
+     *      <br/><br/>
+     *      Properties availables for address search :<br/>
+     *      "postalCode", "inseeCode" and "city".
+     *      <br/><br/>
+     *      Properties availables for place names search :<br/>
+     *      "postalCode", "inseeCode" and "type".
+     *      <br/><br/>
+     *      Properties availables for cadastral parcels search :<br/>
+     *      "codeDepartement", "codeCommune", "nomCommune", "codeCommuneAbs", "codeArrondissement", "section", "numero", "feuille".
+     * @param {Object} [options.searchGeometry] - Location where to perform the search.
+     *      @param {String} options.searchGeometry.type - Geometry type (Point|Circle|Linestring|Polygon)
+     *      @param {Array.<Float>|Array.Array.<Float>} options.searchGeometry.coordinates - Coordinates
+     *      @param {Float} [options.searchGeometry.radius] - Radius (only for type 'Circle')
+     * @param {Number} [options.maximumResponses=20] - Maximum number of responses. Default underlying service value applies (20) if not provided.
      * @param {Function} options.onSuccess - Callback function for getting successful service response. Takes a {@link Gp.Services.GeocodeResponse} object as a parameter except if "rawResponse" is set to true.
      * @param {Function} [options.onFailure] - Callback function for handling unsuccessful service responses (timeOut, missing rights, ...). Takes a {@link Gp.Error} object as parameter.
      * @param {Number} [options.timeOut=0] - Number of milliseconds above which a timeOut response will be returned with onFailure callback (see above). Default value is 0 which means timeOut will not be handled.
      * @param {String} [options.serverUrl=http (s)://wxs.ign.fr/APIKEY/geoportail/ols] - Web service URL. If used, options.apiKey parameter is ignored. Only use if you know what you're doing.
      * @param {Boolean} [options.ssl = true] - Use of HTTPS or HTTP protocol to request the services. HTTPS by default (ssl=true).
-     * @param {String} [options.protocol=XHR] - Protocol used to handle dialog with web service. Possible values are 'JSONP' ({@link https://en.wikipedia.org/wiki/JSONP}) and 'XHR' ({@link https://en.wikipedia.org/wiki/XMLHttpRequest}). Only XHR protocol is supported in a NodeJS environment. Only use if you know what you're doing.
      * @param {String} [options.proxyURL] - Proxy URL to use when requesting underlying web service. Ignored when options.protocol is set to 'JSONP' value. Only use if you know what you're doing.
      * @param {String} [options.callbackSuffix] - Callback function name suffix to use in case of a JSONP protocol use (see above), to set your own suffix instead of auto-increment. Ignored when options.protocol is set to 'XHR' value. Only use if you know what you're doing.
-     * @param {String} [options.httpMethod=GET] - HTTP method to use when requesting underlying web service in case of a XHR protocol use (see above). Possible values are 'GET' and 'POST'. Ignored when options.protocol is set to 'JSONP' value. Only use if you know what you are doing.
-     * @param {String} [options.contentType="application/xml"] - Content-Type to use when requesting underlying web service in case of a XHR protocol use (see above) and if method HTTP is POST. Ignored when options.protocol is set to 'JSONP' value. Only use if you know what you are doing.
      * @param {Boolean} [options.rawResponse=false] - Setting this parameter to true implies you want to handle the service response by yourself : it will be returned as an unparsed String in onSuccess callback parameter. Only use if you know what you are doing.
      * @param {Function} [options.onBeforeParse] - Callback function for handling service response before parsing (as an unparsed String). Takes a String as a parameter (the raw service response). Returns a String that will be parsed as the service response. Only use if you know what you are doing.
      */

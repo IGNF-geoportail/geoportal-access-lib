@@ -2,7 +2,7 @@
 /**
  * Response object for {@link module:Services~geocode Gp.Services.geocode ()} or {@link module:Services~reverseGeocode Gp.Services.reverseGeocode ()} invocation when successful. Received as the argument of onSuccess callback function.
  *
- * @property {Array.<Gp.Services.Geocode.DirectGeocodedLocation|Gp.Services.Geocode.ReverseGeocodedLocation>} locations - locations array.
+ * @property {Array.<Gp.Services.Geocode.GeocodedLocation>} locations - locations array.
  *
  * @namespace
  * @alias Gp.Services.GeocodeResponse
